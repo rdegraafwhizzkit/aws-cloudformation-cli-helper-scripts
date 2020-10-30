@@ -1,0 +1,4 @@
+{
+    "name":"example-1",
+    "template":"cloudformation.yaml"
+}

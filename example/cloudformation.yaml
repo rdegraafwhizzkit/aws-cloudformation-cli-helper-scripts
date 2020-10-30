@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation Template
+
+Parameters:
+
+  PermissionsBoundary:
+    Description: This is the description
+    Type: String
+    Default: Default value if not given in parameters
+
+Conditions:
+  ShouldCreateBoundary: !Not [ !Equals [ !Ref PermissionsBoundary, ''] ]
+
+Resources:
+
+  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary:
+        !If
+        - ShouldCreateBoundary
+        -
+          !Ref PermissionsBoundary
+        - !Ref "AWS::NoValue"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Description: Template EC2 Role
+      Policies:
+        - PolicyName: allow-everything
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: AllowEverything
+                Effect: Allow
+                Action:
+                  - "*:*"
+                Resource: '*'
+
+Outputs:
+
+  RoleName:
+      Description: Role ARN
+      Value: !GetAtt Role.Arn
+      Export:
+        Name: !Join [ ":", [ !Ref "AWS::StackName", RoleArn ] ]

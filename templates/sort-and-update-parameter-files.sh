@@ -12,10 +12,12 @@ else
 fi
 
 TEMPLATE_FILE=$(jq -r '.template' ${STACK_INFO})
+TEMPLATE_LOCATION=$(jq -r '.template_location' ${STACK_INFO})
 STACK_NAME=$(jq -r '.name' ${STACK_INFO})
+ENVIRONMENT=$(dirname ${STACK_INFO})
 
 aws cloudformation validate-template \
-  --template-body file://${TEMPLATE_FILE} \
+  --template-body file://${TEMPLATE_LOCATION}/${TEMPLATE_FILE} \
   ${AWS_PROFILE}| \
   jq -r '[.Parameters[]|{ParameterKey}]|sort_by(.ParameterKey |= ascii_downcase)[]|.ParameterKey' \
   >  template.tmp
@@ -25,7 +27,7 @@ jq -r '.[]|.ParameterKey' parameters.json|sort > config.tmp
 for parameter in $(comm -23 template.tmp config.tmp); do
   echo Adding parameter ${parameter} to parameters.json
   key=$(echo ${parameter}|tr -d '\n\r')
-  jq '. + [ {"ParameterKey": "'${parameter}'","ParameterValue":""} ]' parameters.json >parameters.json.new
+  jq '. + [ {"ParameterKey": "'${key}'","ParameterValue":""} ]' parameters.json > parameters.json.new
   mv parameters.json.new parameters.json
 done
 

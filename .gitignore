@@ -1,4 +1,5 @@
 venv
 .idea
 *.tmp
-*.zip
+example/*sh
+example/*json

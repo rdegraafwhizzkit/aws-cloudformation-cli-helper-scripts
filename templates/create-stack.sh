@@ -8,7 +8,7 @@ echo \
 aws cloudformation    create-stack \
   --stack-name        STACK_NAME \
   --template-body     file://TEMPLATE_FILE \
-  --parameters        parameters.json \
-  --tags              tags.json \
+  --parameters        file://parameters.json \
+  --tags              file://tags.json \
   ${CAPABILITIES} \
   ${AWS_PROFILE}

@@ -1,5 +1,5 @@
 venv
 .idea
 *.tmp
-example/*sh
-example/*json
+example/environments/templates
+example/scripts

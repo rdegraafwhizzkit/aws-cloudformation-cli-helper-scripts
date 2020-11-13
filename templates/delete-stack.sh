@@ -1,8 +1,8 @@
 #!/bin/bash
 
-. ./set-environment.sh $@
+. ./scripts/get-environment.sh $@
 
 echo \
-aws cloudformation    delete-stack \
-  --stack-name        STACK_NAME \
-  ${AWS_PROFILE}
+aws cloudformation  delete-stack \
+  --stack-name      ${STACK_NAME} \
+  --profile         ${PROFILE}

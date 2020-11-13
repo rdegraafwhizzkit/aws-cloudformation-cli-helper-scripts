@@ -1,0 +1,5 @@
+{
+    "prefix":"cloudformation",
+    "profile":"nn-nnip-quartzdb-prd",
+    "stackname":"example-test-stack"
+}

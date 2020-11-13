@@ -3,7 +3,7 @@
 AWS_PROFILE=""
 if [ "$#" -eq 2 ]; then
   STACK_INFO=${1}
-  AWS_PROFILE="--profile ${2}"
+  AWS_PROFILE="${2}"
 elif [ "$#" -eq 1 ]; then
   STACK_INFO=${1}
 else
@@ -12,53 +12,31 @@ else
 fi
 
 HELPER_DIR=$(dirname "$(realpath $0)")
-TEMPLATE_FILE=$(jq -r '.template' ${STACK_INFO})
-TEMPLATE_LOCATION=$(jq -r '.template_location' ${STACK_INFO})
-STACK_NAME=$(jq -r '.name' ${STACK_INFO})
 ENVIRONMENT=$(dirname ${STACK_INFO})
 
-exit 1
+PREFIX=$(jq -r '.prefix' ${STACK_INFO})
 
-mkdir -p ${ENVIRONMENT}
+mkdir -p scripts/${PREFIX}
+mkdir -p environments/templates
 
-test -f ${ENVIRONMENT}/parameters.json || \
-  aws cloudformation validate-template \
-    --template-body file://${TEMPLATE_FILE} \
-    ${AWS_PROFILE} | \
-  jq '[.Parameters[]|{ParameterKey,"ParameterValue":""}]|sort_by(.ParameterKey |= ascii_downcase)' \
-    >  ${ENVIRONMENT}/parameters.json
+for script in \
+  validate-templates.sh \
+  get-capabilities.sh \
+  get-environment.sh \
+  generate-conf-templates.sh \
+  sort-and-update-parameter-files.sh; do
+  test -f scripts/${script} || \
+    cp "${HELPER_DIR}/templates/${script}" scripts/${script}
+done
 
-test -f ${ENVIRONMENT}/tags.json || \
-  jq '.' "${HELPER_DIR}/templates/tags.json" >  ${ENVIRONMENT}/tags.json
+./scripts/generate-conf-templates.sh ${AWS_PROFILE}
 
-test -f ${ENVIRONMENT}/validate-template.sh || \
-  cat "${HELPER_DIR}/templates/validate-template.sh" | \
-  sed 's@TEMPLATE_FILE@'"${TEMPLATE_LOCATION}/${TEMPLATE_FILE}"'@g' > ${ENVIRONMENT}/validate-template.sh
-
-test -f ${ENVIRONMENT}/delete-stack.sh || \
-  cat "${HELPER_DIR}/templates/delete-stack.sh" | \
-  sed 's@STACK_NAME@'"${STACK_NAME}"'@g' > ${ENVIRONMENT}/delete-stack.sh
-
-test -f ${ENVIRONMENT}/get-capabilities.sh || \
-  cat "${HELPER_DIR}/templates/get-capabilities.sh" | \
-  sed 's@TEMPLATE_FILE@'"${TEMPLATE_LOCATION}/${TEMPLATE_FILE}"'@g' > ${ENVIRONMENT}/get-capabilities.sh
-
-test -f ${ENVIRONMENT}/set-environment.sh || \
-  cp "${HELPER_DIR}/templates/set-environment.sh" ${ENVIRONMENT}
-
-test -f ${ENVIRONMENT}/validate-template.sh || \
-  cat "${HELPER_DIR}/templates/validate-template.sh" | \
-  sed 's@TEMPLATE_FILE@'"${TEMPLATE_LOCATION}/${TEMPLATE_FILE}"'@g' > ${ENVIRONMENT}/validate-template.sh
-
-test -f ${ENVIRONMENT}/create-stack.sh || \
-  cat "${HELPER_DIR}/templates/create-stack.sh" | \
-  sed 's@STACK_NAME@'"${STACK_NAME}"'@g' | \
-  sed 's@TEMPLATE_FILE@'"${TEMPLATE_LOCATION}/${TEMPLATE_FILE}"'@g' > ${ENVIRONMENT}/create-stack.sh
-
-test -f ${ENVIRONMENT}/create-change-set.sh || \
-  cat "${HELPER_DIR}/templates/create-change-set.sh" | \
-  sed 's@STACK_NAME@'"${STACK_NAME}"'@g' | \
-  sed 's@TEMPLATE_FILE@'"${TEMPLATE_LOCATION}/${TEMPLATE_FILE}"'@g' > ${ENVIRONMENT}/create-change-set.sh
-
-test -f ${ENVIRONMENT}/sort-and-update-parameter-files.sh || \
-  cp "${HELPER_DIR}/templates/sort-and-update-parameter-files.sh" ${ENVIRONMENT}/sort-and-update-parameter-files.sh
+for script in \
+  create-change-set.sh \
+  create-stack.sh \
+  delete-stack.sh \
+  prepare-stack.sh \
+  sort-and-update-parameter-files.sh; do
+  test -f scripts/${PREFIX}/${script} || \
+    cp "${HELPER_DIR}/templates/${script}" scripts/${PREFIX}/${script}
+done

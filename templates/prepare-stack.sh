@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# . set-environment.sh $@
+. set-environment.sh $@
 
 # PARAMETERS=parameters.json
 # S3_BUCKET=$(jq -r '.[]|select(.ParameterKey=="S3Bucket")|.ParameterValue' ${PARAMETERS})

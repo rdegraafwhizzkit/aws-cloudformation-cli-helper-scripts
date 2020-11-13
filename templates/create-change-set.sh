@@ -1,15 +1,17 @@
 #!/bin/bash
 
-. ./set-environment.sh $@
+. ./scripts/get-environment.sh $@
 
-. ./get-capabilities.sh $@
+. ./scripts/get-capabilities.sh \
+  templates/${PREFIX}.yaml \
+  ${PROFILE}
 
 echo \
-aws cloudformation    create-change-set \
-  --stack-name        STACK_NAME \
-  --template-body     file://TEMPLATE_FILE \
-  --parameters        file://parameters.json \
-  --tags              file://tags.json \
-  --change-set-name   STACK_NAME-${DATE} \
+aws cloudformation  create-change-set \
+  --stack-name      ${STACK_NAME} \
+  --profile         ${PROFILE} \
+  --template-body   file://templates/${PREFIX}.yaml \
+  --parameters      file://environments/${ENVIRONMENT}/${PREFIX}.json \
+  --tags            file://environments/${ENVIRONMENT}/${PREFIX}-tags.json \
   ${CAPABILITIES} \
-  ${AWS_PROFILE}
+  --change-set-name ${STACK_NAME}-${DATE}

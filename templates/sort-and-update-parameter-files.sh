@@ -1,44 +1,40 @@
 #!/bin/bash
 
-AWS_PROFILE=""
-if [ "$#" -eq 2 ]; then
-  STACK_INFO=${1}
-  AWS_PROFILE="--profile ${2}"
-elif [ "$#" -eq 1 ]; then
-  STACK_INFO=${1}
-else
-  echo Please provide stack info filename and optionally the AWS profile name
-  exit 1
-fi
+. ./scripts/get-environment.sh $@
 
-TEMPLATE_FILE=$(jq -r '.template' ${STACK_INFO})
-TEMPLATE_LOCATION=$(jq -r '.template_location' ${STACK_INFO})
-STACK_NAME=$(jq -r '.name' ${STACK_INFO})
-ENVIRONMENT=$(dirname ${STACK_INFO})
+for json in $(ls -1 environments/${ENVIRONMENT}/*.json|grep -v deploy); do
 
-aws cloudformation validate-template \
-  --template-body file://${TEMPLATE_LOCATION}/${TEMPLATE_FILE} \
-  ${AWS_PROFILE}| \
-  jq -r '[.Parameters[]|{ParameterKey}]|sort_by(.ParameterKey |= ascii_downcase)[]|.ParameterKey' \
-  >  template.tmp
-jq -r '.[]|.ParameterKey' parameters.json|sort > config.tmp
+  if [[ "${json}" != *"tags"* ]];then
 
-# New parameters
-for parameter in $(comm -23 template.tmp config.tmp); do
-  echo Adding parameter ${parameter} to parameters.json
-  key=$(echo ${parameter}|tr -d '\n\r')
-  jq '. + [ {"ParameterKey": "'${key}'","ParameterValue":""} ]' parameters.json > parameters.json.new
-  mv parameters.json.new parameters.json
+    jq -r '.[]|.ParameterKey' environments/templates/$(basename ${json})|sort > template.tmp
+    jq -r '.[]|.ParameterKey' ${json}|sort > config.tmp
+
+    # New parameters
+    for parameter in $(comm -23 template.tmp config.tmp); do
+      parameter=$(echo ${parameter}|tr -d '\n\r')
+      echo Adding parameter ${parameter} to ${json}
+      jq '. + [ {"ParameterKey": "'${parameter}'","ParameterValue":""} ]' ${json} > ${json}.new
+      mv ${json}.new ${json}
+    done
+
+    # Removed parameters
+    echo The following parameters may be removed from ${json}
+    for parameter in $(comm -13 template.tmp config.tmp); do
+      echo ${parameter}|tr -d '\n\r'
+      echo
+    done
+
+    # Clean up
+    rm -f *.tmp
+
+    jq '.|sort_by(.ParameterKey |= ascii_downcase)' ${json} > ${json}.new
+    mv ${json}.new ${json}
+
+  else
+
+    jq '.|sort_by(.Key |= ascii_downcase)' ${json} > ${json}.new
+    mv ${json}.new ${json}
+
+  fi
+
 done
-
-# Removed parameters
-echo The following parameters may be removed from ${TEMPLATE_FILE}
-for parameter in $(comm -13 template.tmp config.tmp); do
-  echo ${parameter}
-done
-
-# Clean up
-rm -f *.tmp
-
-jq '.|sort_by(.Key |= ascii_downcase)' tags.json > tags.json.new
-mv tags.json.new tags.json
